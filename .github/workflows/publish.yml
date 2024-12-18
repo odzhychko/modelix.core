@@ -35,7 +35,7 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Configure the project version
         id: version
@@ -63,45 +63,10 @@ jobs:
         # Perform the build in a separate call to avoid trying to publish
         # something where the build already failed partially. This could happen
         # due to the use of the --continue flag in the publish step.
-      - name: Build
-        run: >-
-          ./gradlew --build-cache build
-          --info
-          -PciBuild=true
-      - name: Publish
-        # We run gradle with --info to debug the ongoing random publishing
-        # issues. Gradle would log upload retries on info level:
-        # https://github.com/gradle/gradle/blob/2e843f089f969940e505e69eb0742ed4fbf67993/platforms/software/dependency-management/src/main/java/org/gradle/api/internal/artifacts/repositories/transport/NetworkOperationBackOffAndRetry.java#L64
-        # Maybe retries are the source of our duplicate publication attempts.
-        #
-        # We use --continue to work around the commonly seen 403 issues.
-        # Usually, the artifact that cannot be uploaded is strangely already
-        # in the repo. As the result, by ignoring the exception, we should end
-        # up with a working release in most cases.
-        run: |-
-          if [[ "$IS_PR" = 'true' ]]; then
-            TARGET=publishToMavenLocal
-          else
-            TARGET=publish
-          fi
-          ./gradlew --build-cache $TARGET \
-            --continue \
-            --info \
-            -PciBuild=true \
-            -Partifacts.itemis.cloud.user=${{ secrets.ARTIFACTS_ITEMIS_CLOUD_USER }} \
-            -Partifacts.itemis.cloud.pw=${{ secrets.ARTIFACTS_ITEMIS_CLOUD_PW }} \
-            -Pgpr.user=${{ github.actor }} \
-            -Pgpr.key=${{ secrets.GITHUB_TOKEN }} \
-            -Pgpr.universalkey=${{ secrets.GHP_UNIVERSAL_PUBLISH_TOKEN }} \
-            -Porg.gradle.internal.http.connectionTimeout=180000 \
-            -Porg.gradle.internal.http.socketTimeout=180000
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.ARTIFACTS_ITEMIS_CLOUD_NPM_TOKEN }}
-          IS_PR: ${{ github.event_name == 'pull_request' }}
       # Try to log in early. If this fails, there's no reason to perform the remaining steps
       - name: Log in to Docker Hub
         # Only attempt to log in if we later attempt to push.
-        if: ${{ env.PUSH }}
+        if: ${{ env.PUSH == 'true' }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_HUB_USER }}
