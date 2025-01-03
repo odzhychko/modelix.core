@@ -17,6 +17,7 @@
   ],
   customManagers: [
     {
+      depName: "Node.js",
       // Custom manager for Docker image version in version.properties
       customType: "regex",
       fileMatch: ["^gradle/libs.versions.toml$"],
